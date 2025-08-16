@@ -1,0 +1,47 @@
+mkdir -p .github/workflows
+cat > .github/workflows/daily.yml <<'YAML'
+name: Daily Retweets to Notion
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # JST 08:00
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run fillDailyFromX.ts
+        env:
+          NOTION_TOKEN:        ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID:  ${{ secrets.NOTION_DATABASE_ID }}
+          X_BEARER:            ${{ secrets.X_BEARER }}
+          X_USER_ID:           ${{ secrets.X_USER_ID }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          USE_GEMINI:          ${{ secrets.USE_GEMINI }}
+          SUMMARY_LINES:       ${{ secrets.SUMMARY_LINES }}
+          SUMMARY_LANG:        ${{ secrets.SUMMARY_LANG }}
+          GEMINI_BATCH_SIZE:   ${{ secrets.GEMINI_BATCH_SIZE }}
+          GEMINI_MAX_RPM:      ${{ secrets.GEMINI_MAX_RPM }}
+          PER_ITEM_SUMMARY:    ${{ secrets.PER_ITEM_SUMMARY }}
+          SUMMARIZE_TOP_N:     ${{ secrets.SUMMARIZE_TOP_N }}
+          TZ:                  ${{ secrets.TZ }}
+        run: npx tsx src/fillDailyFromX.ts
+YAML
+
+git add .github/workflows/daily.yml
+git commit -m "Add GitHub Actions workflow (daily run)"
+git push
