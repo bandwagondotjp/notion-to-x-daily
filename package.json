@@ -1,0 +1,18 @@
+{
+  "name": "notion-daily-page",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/createDailyPage.ts"
+  },
+    "dependencies":{
+    "@google/generative-ai": "^0.11.0",
+    "@notionhq/client": "^2.2.14",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.1"
+  } ,
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
