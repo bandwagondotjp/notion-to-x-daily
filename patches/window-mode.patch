@@ -1,0 +1,86 @@
+diff --git a/src/fillDailyFromX.ts b/src/fillDailyFromX.ts
+index 1234567..89abcde 100644
+--- a/src/fillDailyFromX.ts
++++ b/src/fillDailyFromX.ts
+@@
+ if (!X_BEARER || !X_USER_ID) throw new Error('X_BEARER/X_USER_ID が未設定');
+ 
+-// JSTの日付判定（今日かどうか）
+-function isTodayJST(isoUTC: string): boolean {
+-  const d = new Date(isoUTC);
+-  const jst = new Date(d.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
+-  const now = new Date();
+-  const jNow = new Date(now.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
+-  return (
+-    jst.getFullYear() === jNow.getFullYear() &&
+-    jst.getMonth() === jNow.getMonth() &&
+-    jst.getDate() === jNow.getDate()
+-  );
+-}
++// --- JSTユーティリティ ---
++function toJST(d: Date) {
++  return new Date(d.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
++}
++function startOfJSTDay(d: Date) {
++  const j = toJST(d);
++  return new Date(
++    `${j.getFullYear()}-${String(j.getMonth() + 1).padStart(2, "0")}-${String(
++      j.getDate()
++    ).padStart(2, "0")}T00:00:00+09:00`
++  );
++}
++type Window = { start: Date; end: Date };
++
++// 実行モード: 1日全体 or 半日ごと
++const RUN_MODE = (process.env.RUN_MODE ||
++  "DAILY_YESTERDAY") as
++  | "DAILY_YESTERDAY"
++  | "HALF_AM_TODAY"
++  | "HALF_PM_YESTERDAY";
++
++function computeWindow(mode: typeof RUN_MODE): Window {
++  const now = new Date();
++  const today0 = startOfJSTDay(now);
++  const yesterday0 = new Date(today0.getTime() - 24 * 60 * 60 * 1000);
++
++  if (mode === "DAILY_YESTERDAY") {
++    return { start: yesterday0, end: today0 }; // 昨日0:00〜今日0:00
++  }
++  if (mode === "HALF_AM_TODAY") {
++    const today13 = new Date(today0.getTime() + 13 * 60 * 60 * 1000);
++    return { start: today0, end: today13 }; // 今日0:00〜13:00
++  }
++  // HALF_PM_YESTERDAY
++  const y13 = new Date(yesterday0.getTime() + 13 * 60 * 60 * 1000);
++  return { start: y13, end: today0 }; // 昨日13:00〜今日0:00
++}
++
++function inWindowJST(isoUTC: string, w: Window) {
++  const tJ = toJST(new Date(isoUTC));
++  return w.start <= tJ && tJ < w.end;
++}
+ 
+ async function fetchTodaysRetweets(): Promise<any[]> {
+   const url = `https://api.x.com/2/users/${X_USER_ID}/tweets?max_results=100&tweet.fields=referenced_tweets,author_id,created_at&expansions=referenced_tweets.id.author_id`;
+@@
+   const collected: any[] = [];
+ 
+   for (const t of myTweets) {
+-    const ref = (t.referenced_tweets || []).find(
+-      (r: any) => r.type === "retweeted"
+-    );
+-    if (!ref) continue;
+-    if (!isTodayJST(t.created_at)) continue;
+-
+-    collected.push(t);
++    const ref = (t.referenced_tweets || []).find(
++      (r: any) => r.type === "retweeted"
++    );
++    if (!ref) continue;
++    const win = computeWindow(RUN_MODE);
++    if (!inWindowJST(t.created_at, win)) continue;
++
++    collected.push(t);
+   }
+ 
+   console.log(`✅ ${collected.length}件を収集しました`);
