@@ -5,13 +5,14 @@
   "scripts": {
     "start": "tsx src/createDailyPage.ts"
   },
-    "dependencies":{
+  "dependencies": {
     "@google/generative-ai": "^0.11.0",
     "@notionhq/client": "^2.2.14",
     "axios": "^1.7.2",
     "dotenv": "^16.4.5",
+    "oauth-1.0a": "^2.2.6",
     "tsx": "^4.19.1"
-  } ,
+  },
   "devDependencies": {
     "typescript": "^5.5.4"
   }
